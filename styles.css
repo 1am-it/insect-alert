@@ -126,41 +126,41 @@ input, textarea {
 .blob {
   position: fixed;
   z-index: -1;
-  width: 140px;
-  height: 140px;
+  width: 110px;
+  height: 110px;
   pointer-events: none;
 }
 
 .blob-tl {
-  top: -50px;
-  left: -50px;
+  top: -40px;
+  left: -40px;
 }
 
 .blob-tr {
-  top: -40px;
-  right: -55px;
+  top: -35px;
+  right: -45px;
 }
 
 .blob-bl {
-  bottom: -50px;
-  left: -55px;
+  bottom: -40px;
+  left: -45px;
 }
 
 .blob-br {
-  bottom: -40px;
-  right: -50px;
+  bottom: -35px;
+  right: -40px;
 }
 
 /* On larger screens, push blobs further out so they peek behind content */
 @media (min-width: 768px) {
   .blob {
-    width: 200px;
-    height: 200px;
+    width: 160px;
+    height: 160px;
   }
-  .blob-tl { top: -70px; left: -70px; }
-  .blob-tr { top: -60px; right: -75px; }
-  .blob-bl { bottom: -70px; left: -75px; }
-  .blob-br { bottom: -60px; right: -70px; }
+  .blob-tl { top: -55px; left: -55px; }
+  .blob-tr { top: -50px; right: -60px; }
+  .blob-bl { bottom: -55px; left: -60px; }
+  .blob-br { bottom: -50px; right: -55px; }
 }
 
 /* ----------------------------------------------------------------------------
