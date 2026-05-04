@@ -3,34 +3,329 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Bevat dit product insecten? Plak de ingrediëntenlijst of maak een foto van het etiket — InsectAlert herkent insect-ingrediënten in voedingsmiddelen." />
   <meta name="robots" content="noindex, nofollow" />
-  <title>InsectAlert — under construction</title>
-  <style>
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      max-width: 480px;
-      margin: 4rem auto;
-      padding: 2rem;
-      color: #0F1419;
-      line-height: 1.6;
-    }
-    h1 {
-      font-weight: 500;
-      margin-bottom: 0.5rem;
-    }
-    p {
-      color: #4A5568;
-    }
-    code {
-      background: #F0F0F0;
-      padding: 0.1em 0.4em;
-      border-radius: 4px;
-      font-size: 0.9em;
-    }
-  </style>
+  <title>Bevat dit product insecten? — InsectAlert</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <h1>InsectAlert</h1>
-  <p>Under construction. The MVP is being built — see the <code>1am-it/insect-alert</code> repository for progress.</p>
+
+  <!-- Decorative blobs in corners — purely visual, ignored by screen readers -->
+  <div class="blob blob-tl" aria-hidden="true"></div>
+  <div class="blob blob-tr" aria-hidden="true"></div>
+  <div class="blob blob-bl" aria-hidden="true"></div>
+  <div class="blob blob-br" aria-hidden="true"></div>
+
+  <main class="container">
+
+    <!-- Hero: tilted badge + headline + subline -->
+    <header class="hero">
+      <div class="badge" aria-hidden="true">Insect alert</div>
+      <h1 class="hero-title">Bevat dit product<br />insecten?</h1>
+      <p class="hero-subline">
+        Plak de ingrediëntenlijst of maak een foto van het etiket
+      </p>
+    </header>
+
+    <!-- Input card: tab toggle + paste textarea + photo upload (inert in this ticket) -->
+    <section class="input-card" aria-label="Invoer">
+
+      <!-- Tab toggle: paste vs photo -->
+      <div class="tab-toggle" role="tablist" aria-label="Invoermethode">
+        <button
+          class="tab tab-active"
+          role="tab"
+          aria-selected="true"
+          aria-controls="panel-paste"
+          id="tab-paste"
+          type="button"
+        >
+          Plak tekst
+        </button>
+        <button
+          class="tab"
+          role="tab"
+          aria-selected="false"
+          aria-controls="panel-photo"
+          id="tab-photo"
+          type="button"
+        >
+          Foto van etiket
+        </button>
+      </div>
+
+      <!-- Panel: paste textarea -->
+      <div
+        class="panel"
+        role="tabpanel"
+        id="panel-paste"
+        aria-labelledby="tab-paste"
+      >
+        <label for="ingredient-input" class="visually-hidden">
+          Plak hier de ingrediëntenlijst van het product
+        </label>
+        <textarea
+          id="ingredient-input"
+          class="textarea"
+          placeholder="Plak hier de ingrediëntenlijst van het product..."
+          rows="5"
+        ></textarea>
+      </div>
+
+      <!-- Panel: photo upload (visually hidden in this ticket — paste is the active tab) -->
+      <div
+        class="panel panel-hidden"
+        role="tabpanel"
+        id="panel-photo"
+        aria-labelledby="tab-photo"
+        hidden
+      >
+        <label for="photo-input" class="photo-dropzone">
+          <svg class="photo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+          <span class="photo-label">Maak een foto van het etiket</span>
+          <span class="photo-sublabel">of sleep een afbeelding hierheen</span>
+          <input
+            id="photo-input"
+            type="file"
+            accept="image/*"
+            capture="environment"
+            class="visually-hidden"
+          />
+        </label>
+        <div class="photo-actions">
+          <button class="btn btn-primary" type="button">Open camera</button>
+          <button class="btn btn-secondary" type="button">Bestand kiezen</button>
+        </div>
+      </div>
+
+      <!-- Primary CTA — visible in paste mode -->
+      <button class="btn btn-primary btn-large btn-cta" type="button">
+        Check op insecten
+      </button>
+
+      <p class="input-disclaimer">
+        InsectAlert geeft informatie op basis van door jou verstrekte gegevens.
+        Controleer bij twijfel altijd het originele etiket of neem contact op met de fabrikant.
+      </p>
+    </section>
+
+    <!-- Result cards — all three states present in HTML, hidden by default.
+         JS in 1AM-56 will reveal one based on detection result.
+         For dev/preview the gevonden state is shown by default so the layout is visible. -->
+
+    <!-- Result: gevonden -->
+    <section class="result-card result-gevonden" aria-live="polite">
+      <div class="result-icon-wrap">
+        <div class="result-icon result-icon-gevonden" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="16" cy="16" r="13"/>
+            <path d="M16 9v8M16 21v.5"/>
+          </svg>
+        </div>
+      </div>
+
+      <h2 class="result-title result-title-gevonden">Ja, dit product bevat insecten</h2>
+
+      <div class="result-detail-grid">
+        <div class="result-detail">
+          <span class="result-detail-label">Nederlandse naam</span>
+          <span class="result-detail-value">Huiskrekel</span>
+        </div>
+        <div class="result-detail-divider" aria-hidden="true"></div>
+        <div class="result-detail">
+          <span class="result-detail-label">Latijnse naam</span>
+          <span class="result-detail-value result-detail-value-italic">Acheta domesticus</span>
+        </div>
+      </div>
+
+      <blockquote class="result-snippet">
+        gedeeltelijk ontvet poeder verkregen uit Acheta domesticus
+      </blockquote>
+
+      <p class="result-decoder">
+        Huiskrekel is sinds 2022 in de EU toegelaten als ingrediënt voor menselijke consumptie.
+        Komt voor als poeder in brood, pasta, koekjes, snacks, sauzen en vleesvervangers.
+      </p>
+
+      <div class="result-feedback">
+        <span class="result-feedback-label">Klopt dit?</span>
+        <button class="btn-feedback" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M7 10v12M15 5.88L14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H7"/>
+          </svg>
+          Klopt
+        </button>
+        <button class="btn-feedback" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M17 14V2M9 18.12L10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H17"/>
+          </svg>
+          Klopt niet
+        </button>
+      </div>
+
+      <button class="btn btn-primary btn-large" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="btn-icon">
+          <path d="M3 12a9 9 0 1 0 9-9M3 12l4-4M3 12l4 4"/>
+        </svg>
+        Nieuwe controle
+      </button>
+    </section>
+
+    <!-- Result: niet-gevonden — hidden by default -->
+    <section class="result-card result-niet-gevonden" hidden aria-live="polite">
+      <div class="result-icon-wrap">
+        <div class="result-icon result-icon-niet-gevonden" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="16" cy="16" r="13"/>
+            <path d="M10 16l4 4 8-8"/>
+          </svg>
+        </div>
+      </div>
+
+      <h2 class="result-title result-title-niet-gevonden">Geen insecten gevonden</h2>
+
+      <p class="result-decoder">
+        We hebben geen insectenbestanddelen of E-nummers herkend in deze ingrediëntenlijst.
+      </p>
+
+      <p class="result-decoder result-decoder-muted">
+        Twijfel je? Controleer ook de allergeneninformatie op de verpakking.
+      </p>
+
+      <div class="result-feedback">
+        <span class="result-feedback-label">Klopt dit?</span>
+        <button class="btn-feedback btn-feedback-success" type="button">Klopt</button>
+        <button class="btn-feedback btn-feedback-success" type="button">Klopt niet</button>
+      </div>
+
+      <button class="btn btn-primary btn-large" type="button">
+        Nieuwe controle
+      </button>
+    </section>
+
+    <!-- Result: twijfel — hidden by default -->
+    <section class="result-card result-twijfel" hidden aria-live="polite">
+      <div class="result-icon-wrap">
+        <div class="result-icon result-icon-twijfel" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="16" cy="16" r="13"/>
+            <path d="M12 12a4 4 0 1 1 5 4v2M16 22v.5"/>
+          </svg>
+        </div>
+      </div>
+
+      <h2 class="result-title result-title-twijfel">We weten het niet zeker</h2>
+
+      <p class="result-decoder">
+        Het etiket vermeldt natuurlijke kleurstof. Dit kan plantaardig zijn,
+        maar ook karmijn (E120) — een rode kleurstof gemaakt van de cochenilleluis.
+      </p>
+
+      <blockquote class="result-snippet result-snippet-twijfel">
+        natuurlijke kleurstof
+      </blockquote>
+
+      <p class="result-decoder result-decoder-muted">
+        Tip: kijk of er een E-nummer naast staat, of vraag het bij de fabrikant.
+      </p>
+
+      <div class="result-feedback">
+        <button class="btn-feedback btn-feedback-warning" type="button">Klopt</button>
+        <button class="btn-feedback btn-feedback-warning" type="button">Klopt niet</button>
+      </div>
+
+      <button class="btn btn-primary btn-large" type="button">
+        Nieuwe controle
+      </button>
+    </section>
+
+    <!-- Error state — hidden by default, shown if API call fails -->
+    <section class="result-card result-error" hidden aria-live="polite">
+      <div class="result-icon-wrap">
+        <div class="result-icon result-icon-error" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="16" cy="16" r="13"/>
+            <path d="M16 9v8M16 21v.5"/>
+          </svg>
+        </div>
+      </div>
+
+      <h2 class="result-title result-title-error">Hmm, dat ging niet goed</h2>
+
+      <p class="result-decoder">
+        We konden het etiket niet lezen. Probeer het opnieuw, of plak de ingrediënten als tekst.
+      </p>
+
+      <button class="btn btn-primary btn-large" type="button">
+        Probeer opnieuw
+      </button>
+      <button class="btn btn-secondary btn-large" type="button">
+        Plak tekst in plaats daarvan
+      </button>
+
+      <p class="result-decoder result-decoder-muted">
+        InsectAlert is een hulpmiddel, geen vervanging voor medisch advies.
+      </p>
+    </section>
+
+    <!-- Email signup — input state -->
+    <section class="email-signup">
+      <h2 class="email-title">Wil je weten wanneer<br />de scan-app er is?</h2>
+      <label for="email-input" class="visually-hidden">E-mailadres</label>
+      <input
+        id="email-input"
+        type="email"
+        class="email-input"
+        placeholder="jouw@email.nl"
+        autocomplete="email"
+      />
+      <button class="btn btn-primary btn-large btn-email" type="button">
+        Houd me op de hoogte
+      </button>
+      <p class="email-disclaimer">
+        We gebruiken je e-mail alleen hiervoor. Geen spam.
+      </p>
+    </section>
+
+    <!-- Email signup — success state, hidden by default -->
+    <section class="email-success" hidden>
+      <div class="email-success-icon" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 8l12 9 12-9"/>
+          <rect x="4" y="6" width="24" height="20" rx="2"/>
+        </svg>
+      </div>
+      <h2 class="email-success-title">Bedankt, je staat op de lijst!</h2>
+      <p class="email-success-text">
+        We sturen je één keer een mailtje zodra de scan-app live staat. Geen spam, beloofd.
+      </p>
+      <button class="btn btn-secondary btn-large" type="button">
+        Terug naar start
+      </button>
+      <p class="email-disclaimer">
+        Door je aan te melden ga je akkoord met ons <a href="#privacy">privacybeleid</a>.
+      </p>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>
+        InsectAlert is een hulpmiddel voor het herkennen van insect-ingrediënten in voedingsmiddelen.
+        Geen medisch advies. Bron: EU Verordening 2017/2470 (Novel Food).
+      </p>
+      <p class="footer-privacy">
+        Foto's worden niet bewaard. Geen accounts, geen tracking-cookies.
+      </p>
+    </footer>
+
+  </main>
 </body>
 </html>
