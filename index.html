@@ -142,8 +142,8 @@
          JS in 1AM-56 will reveal one based on detection result.
          For dev/preview the gevonden state is shown by default so the layout is visible. -->
 
-    <!-- Result: gevonden -->
-    <section class="result-card result-gevonden" aria-live="polite">
+    <!-- Result: gevonden (hidden by default — JS reveals when there's a match) -->
+    <section class="result-card result-gevonden" hidden aria-live="polite">
       <div class="result-icon-wrap">
         <div class="result-icon" aria-hidden="true">
           <!-- Solid red circle with white exclamation mark -->
@@ -372,5 +372,7 @@
     </footer>
 
   </main>
+
+  <script type="module" src="/src/main.js"></script>
 </body>
 </html>
