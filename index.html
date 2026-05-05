@@ -138,6 +138,18 @@
       </p>
     </section>
 
+    <!-- Loading state — shown during photo upload + API call (1AM-57) -->
+    <section class="loading-state" hidden aria-live="polite">
+      <div class="loading-spinner" aria-hidden="true">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <circle cx="32" cy="32" r="26" fill="none" stroke="#0F1419" stroke-width="3" opacity="0.15"/>
+          <circle cx="32" cy="32" r="26" fill="none" stroke="#185FA5" stroke-width="3" stroke-linecap="round" stroke-dasharray="60 200" class="loading-spinner-arc"/>
+        </svg>
+      </div>
+      <h2 class="loading-title">Etiket wordt geanalyseerd...</h2>
+      <p class="loading-subtitle">Dit duurt meestal 2 tot 4 seconden</p>
+    </section>
+
     <!-- Result cards — all three states present in HTML, hidden by default.
          JS in 1AM-56 will reveal one based on detection result.
          For dev/preview the gevonden state is shown by default so the layout is visible. -->
@@ -367,7 +379,7 @@
         Geen medisch advies. Bron: EU Verordening 2017/2470 (Novel Food).
       </p>
       <p class="footer-privacy">
-        Foto's worden niet bewaard. Geen accounts, geen tracking-cookies.
+        Foto's worden niet door ons opgeslagen. Voor de analyse gebruiken we Google Gemini.
       </p>
     </footer>
 

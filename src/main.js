@@ -1,21 +1,29 @@
 /**
- * InsectAlert main.js — UI integration for paste-flow
+ * InsectAlert main.js — UI integration
  *
- * Wires user interactions to the detector and toggles the result-card states
- * defined in index.html (1AM-55).
+ * Wires user interactions to:
+ * - The local detector (paste-flow, 1AM-56) — pure pattern matching
+ * - The /api/scan-photo endpoint (photo-flow, 1AM-57) — vision-LLM extraction
+ *   followed by the same local detector for consistency
  *
  * Architecture:
  * - All result cards live in the DOM, hidden by default
- * - On submit: run detect(), populate the relevant card, show it, hide others
+ * - On submit (paste): run detect() locally, populate card, show it
+ * - On submit (photo): compress image → POST → use server's detection result
  * - "Nieuwe controle" buttons reset the page to the input view
- * - Tab toggle switches between paste and photo input panels
  *
  * No framework. No state-library. Plain DOM manipulation.
  *
- * Last reviewed: 2026-05-04 (1AM-56)
+ * Last reviewed: 2026-05-04 (1AM-57)
  */
 
 import { detect } from './detector.js';
+import imageCompression from 'browser-image-compression';
+
+// Photo upload constraints — keep the API cheap and responsive
+const MAX_IMAGE_WIDTH = 1024;
+const MAX_IMAGE_SIZE_MB = 1;
+const ACCEPTED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
 
 // Wait for DOM to be ready before wiring up listeners
 if (document.readyState === 'loading') {
@@ -27,8 +35,10 @@ if (document.readyState === 'loading') {
 function init() {
   setupTabToggle();
   setupSubmit();
+  setupPhotoUpload();
   setupResetButtons();
   hideAllResultCards();
+  hideLoadingState();
 }
 
 // ============================================================================
@@ -39,6 +49,7 @@ function setupTabToggle() {
   const tabPhoto = document.getElementById('tab-photo');
   const panelPaste = document.getElementById('panel-paste');
   const panelPhoto = document.getElementById('panel-photo');
+  const ctaPaste = document.querySelector('.btn-cta');
 
   if (!tabPaste || !tabPhoto || !panelPaste || !panelPhoto) return;
 
@@ -52,6 +63,9 @@ function setupTabToggle() {
     panelPaste.classList.remove('panel-hidden');
     panelPhoto.setAttribute('hidden', '');
     panelPhoto.classList.add('panel-hidden');
+
+    // Show the paste-tab CTA
+    if (ctaPaste) ctaPaste.removeAttribute('hidden');
   });
 
   tabPhoto.addEventListener('click', () => {
@@ -64,11 +78,14 @@ function setupTabToggle() {
     panelPhoto.classList.remove('panel-hidden');
     panelPaste.setAttribute('hidden', '');
     panelPaste.classList.add('panel-hidden');
+
+    // Hide the paste-tab CTA — photo flow uses its own buttons
+    if (ctaPaste) ctaPaste.setAttribute('hidden', '');
   });
 }
 
 // ============================================================================
-// Submit: read textarea, run detect(), show appropriate result
+// Paste submit: read textarea, run detect(), show appropriate result
 // ============================================================================
 function setupSubmit() {
   const submitButton = document.querySelector('.btn-cta');
@@ -89,7 +106,7 @@ function setupSubmit() {
     showResult(result);
   });
 
-  // Enter-to-submit on textarea (Ctrl+Enter for accessibility)
+  // Ctrl+Enter shortcut for power users
   textarea.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
@@ -99,10 +116,145 @@ function setupSubmit() {
 }
 
 // ============================================================================
+// Photo upload: file input → compress → POST to /api/scan-photo → render
+// ============================================================================
+function setupPhotoUpload() {
+  const fileInput = document.getElementById('photo-input');
+  const openCameraBtn = document.querySelector('.photo-actions .btn-primary');
+  const fileBrowseBtn = document.querySelector('.photo-actions .btn-secondary');
+
+  if (!fileInput) return;
+
+  // Wire up the two buttons to the hidden file input
+  // - "Open camera" sets capture=environment to prefer the rear camera on mobile
+  // - "Bestand kiezen" removes capture so the user gets the regular file picker
+  if (openCameraBtn) {
+    openCameraBtn.addEventListener('click', () => {
+      fileInput.setAttribute('capture', 'environment');
+      fileInput.click();
+    });
+  }
+
+  if (fileBrowseBtn) {
+    fileBrowseBtn.addEventListener('click', () => {
+      fileInput.removeAttribute('capture');
+      fileInput.click();
+    });
+  }
+
+  // The dropzone label itself can also trigger the file picker
+  // (already wired via the <label for> association, no extra JS needed)
+
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate MIME type — phones occasionally produce unusual formats
+    const isImage = ACCEPTED_MIME_TYPES.includes(file.type) || file.type.startsWith('image/');
+    if (!isImage) {
+      showError('Dat lijkt geen afbeelding. Probeer een foto te maken of selecteer een ander bestand.');
+      e.target.value = ''; // reset for retry
+      return;
+    }
+
+    await processPhoto(file);
+    e.target.value = ''; // reset so the same file can be re-selected for retry
+  });
+}
+
+async function processPhoto(file) {
+  showLoadingState();
+
+  let compressedBlob;
+  try {
+    compressedBlob = await imageCompression(file, {
+      maxSizeMB: MAX_IMAGE_SIZE_MB,
+      maxWidthOrHeight: MAX_IMAGE_WIDTH,
+      useWebWorker: true,
+      // Preserve EXIF orientation — iOS sideways photos auto-rotate correctly
+      preserveExif: false,
+    });
+  } catch (error) {
+    console.error('[photo] compression failed:', error);
+    hideLoadingState();
+    showError('We konden de foto niet verwerken. Probeer een andere foto.');
+    return;
+  }
+
+  // Send the compressed image to our endpoint as raw body — keeps the
+  // backend simple (no multipart parsing needed, just read the request body)
+  let response;
+  try {
+    response = await fetch('/api/scan-photo', {
+      method: 'POST',
+      headers: {
+        'Content-Type': compressedBlob.type || 'image/jpeg',
+      },
+      body: compressedBlob,
+    });
+  } catch (error) {
+    console.error('[photo] network error:', error);
+    hideLoadingState();
+    showError('Geen verbinding met de scanner. Controleer je internet en probeer opnieuw.');
+    return;
+  }
+
+  hideLoadingState();
+
+  if (!response.ok) {
+    let message = 'Er ging iets mis bij het analyseren van de foto.';
+    try {
+      const errorBody = await response.json();
+      if (errorBody.message) message = errorBody.message;
+    } catch (_) {
+      // No JSON body — use generic message
+    }
+    showError(message);
+    return;
+  }
+
+  let data;
+  try {
+    data = await response.json();
+  } catch (error) {
+    showError('De server gaf een onverwacht antwoord. Probeer opnieuw.');
+    return;
+  }
+
+  // Server returns the same shape as our local detector + an extractedText field
+  if (data.state === 'error') {
+    showError(data.message || 'Geen ingrediëntenlijst herkend in de foto.');
+    return;
+  }
+
+  showResult({
+    state: data.state,
+    matches: data.matches || [],
+  });
+}
+
+// ============================================================================
+// Loading state — simple inline spinner overlay
+// ============================================================================
+function showLoadingState() {
+  const loading = document.querySelector('.loading-state');
+  if (loading) {
+    loading.removeAttribute('hidden');
+    loading.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+function hideLoadingState() {
+  const loading = document.querySelector('.loading-state');
+  if (loading) {
+    loading.setAttribute('hidden', '');
+  }
+}
+
+// ============================================================================
 // "Nieuwe controle" reset buttons — bring user back to input view
 // ============================================================================
 function setupResetButtons() {
-  // Find every button that says "Nieuwe controle" (across all result cards)
   const allButtons = document.querySelectorAll('.result-card .btn-primary.btn-large');
 
   allButtons.forEach((btn) => {
@@ -111,25 +263,33 @@ function setupResetButtons() {
     }
   });
 
-  // Error-card "Probeer opnieuw" and "Plak tekst in plaats daarvan" — same behavior for now
+  // Error-card "Probeer opnieuw" and "Plak tekst in plaats daarvan"
   const errorCard = document.querySelector('.result-error');
   if (errorCard) {
     errorCard.querySelectorAll('button').forEach((btn) => {
-      btn.addEventListener('click', resetToInput);
+      btn.addEventListener('click', () => {
+        const text = btn.textContent.trim();
+        if (text.includes('Plak tekst')) {
+          // Switch to paste tab as well as resetting
+          resetToInput();
+          document.getElementById('tab-paste')?.click();
+        } else {
+          resetToInput();
+        }
+      });
     });
   }
 }
 
 function resetToInput() {
   hideAllResultCards();
+  hideLoadingState();
 
   const textarea = document.getElementById('ingredient-input');
   if (textarea) {
     textarea.value = '';
-    textarea.focus();
   }
 
-  // Smooth scroll back to top of input card
   const inputCard = document.querySelector('.input-card');
   if (inputCard) {
     inputCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -157,7 +317,6 @@ function showResult(result) {
     populateTwijfel(card, result.matches);
   } else {
     card = document.querySelector('.result-niet-gevonden');
-    // Niet-gevonden has no dynamic data — static decoder text suffices
   }
 
   if (card) {
@@ -166,12 +325,23 @@ function showResult(result) {
   }
 }
 
-/**
- * Populate the "gevonden" card with the first match.
- * If multiple matches exist, we show the first high-certainty insect or colorant.
- * Future enhancement: stack multiple matches in the same card. For MVP we show the
- * primary match — additional matches are still in the result object for analytics.
- */
+function showError(message) {
+  hideAllResultCards();
+  hideLoadingState();
+
+  const errorCard = document.querySelector('.result-error');
+  if (!errorCard) return;
+
+  // Inject the message into the error card's body text
+  const decoder = errorCard.querySelector('.result-decoder');
+  if (decoder && message) {
+    decoder.textContent = message;
+  }
+
+  errorCard.removeAttribute('hidden');
+  errorCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function populateGevonden(card, matches) {
   if (!card || matches.length === 0) return;
 
@@ -185,17 +355,15 @@ function populateGevonden(card, matches) {
   if (nlNameEl) nlNameEl.textContent = primary.nlName || '—';
   if (latinNameEl) latinNameEl.textContent = primary.latinName || '—';
 
-  // Snippet block: keep the quote-icon span, replace the text after it
   if (snippetEl) {
     const quoteSpan = snippetEl.querySelector('.result-snippet-quote');
-    snippetEl.textContent = ''; // clear
-    if (quoteSpan) snippetEl.appendChild(quoteSpan); // re-attach quote icon
+    snippetEl.textContent = '';
+    if (quoteSpan) snippetEl.appendChild(quoteSpan);
     snippetEl.appendChild(document.createTextNode(' ' + primary.snippet));
   }
 
   if (decoderEl) decoderEl.textContent = primary.decoderText;
 
-  // Hide detail-grid for colorants (no Latin species name relevant)
   const detailGrid = card.querySelector('.result-detail-grid');
   if (detailGrid) {
     if (primary.type === 'colorant' && !primary.latinName) {
@@ -206,9 +374,6 @@ function populateGevonden(card, matches) {
   }
 }
 
-/**
- * Populate the "twijfel" card with the snippet and decoder text from the match.
- */
 function populateTwijfel(card, matches) {
   if (!card || matches.length === 0) return;
 

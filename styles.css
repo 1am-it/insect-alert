@@ -646,6 +646,52 @@ input, textarea {
 }
 
 /* ----------------------------------------------------------------------------
+   Loading state — shown during photo scan (1AM-57)
+   ---------------------------------------------------------------------------- */
+.loading-state {
+  background: var(--bg-soft);
+  border: var(--border-w-lg) solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: var(--space-7) var(--space-5);
+  margin-bottom: var(--space-6);
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto var(--space-4);
+}
+
+.loading-spinner svg {
+  width: 100%;
+  height: 100%;
+  animation: loading-rotate 1.2s linear infinite;
+}
+
+.loading-spinner-arc {
+  transform-origin: center;
+}
+
+@keyframes loading-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.loading-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 var(--space-2);
+  color: var(--text-primary);
+}
+
+.loading-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ----------------------------------------------------------------------------
    Email signup
    ---------------------------------------------------------------------------- */
 .email-signup,
