@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.0] — 2026-05-05
+
+### Added
+- Photo upload flow — users can scan a product label image instead of typing the ingredient list. Supported on desktop via file picker; mobile camera flow tracked separately in 1AM-132 (1AM-57)
+- Vendor-agnostic scan utility (`api/_lib/scanImage.js`) with adapter pattern — Gemini implemented now, architecture ready for Anthropic and OpenAI adapters in the future. Lift-ready for extraction to a standalone npm package when a second project needs it (1AM-57, 1AM-131)
+- Two-stage detection architecture: Gemini Flash 2.5 extracts raw ingredient text from the photo, then the existing local detector (1AM-56) performs deterministic pattern matching. Same source of truth for paste-flow and photo-flow (1AM-57)
+- Client-side image compression to max 1024px width via `browser-image-compression` library — keeps API costs low and respects mobile data (1AM-57)
+- Loading state with animated spinner during photo analysis (~2-4s typical, 7s cold-start) (1AM-57)
+
+### Changed
+- Footer privacy disclosure updated to reflect Gemini usage: "Foto's worden niet door ons opgeslagen. Voor de analyse gebruiken we Google Gemini." (1AM-57)
+- `package.json` adds `@google/genai` and `browser-image-compression` as dependencies (1AM-57)
+
+### Known issues
+- Mobile camera flow not yet working on Android Chrome — workaround: use "Bestand kiezen" to upload from gallery, or paste-flow. Tracked in 1AM-132 (1AM-57)
+
+---
+
 ## [0.1.0] — 2026-05-04
 
 ### Added
@@ -25,5 +43,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/1am-it/insect-alert/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/1am-it/insect-alert/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/1am-it/insect-alert/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/1am-it/insect-alert/releases/tag/v0.1.0
