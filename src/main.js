@@ -119,46 +119,33 @@ function setupSubmit() {
 // Photo upload: file input → compress → POST to /api/scan-photo → render
 // ============================================================================
 function setupPhotoUpload() {
-  const fileInput = document.getElementById('photo-input');
-  const openCameraBtn = document.querySelector('.photo-actions .btn-primary');
-  const fileBrowseBtn = document.querySelector('.photo-actions .btn-secondary');
+  // Three file inputs across the photo panel:
+  // - #photo-input — the dropzone label (large tap target)
+  // - #photo-input-camera — "Open camera" button (capture=environment for rear camera)
+  // - #photo-input-file — "Bestand kiezen" button (file browser)
+  // All three share the same change handler.
+  const inputs = [
+    document.getElementById('photo-input'),
+    document.getElementById('photo-input-camera'),
+    document.getElementById('photo-input-file'),
+  ].filter(Boolean);
 
-  if (!fileInput) return;
+  inputs.forEach((input) => {
+    input.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
 
-  // Wire up the two buttons to the hidden file input
-  // - "Open camera" sets capture=environment to prefer the rear camera on mobile
-  // - "Bestand kiezen" removes capture so the user gets the regular file picker
-  if (openCameraBtn) {
-    openCameraBtn.addEventListener('click', () => {
-      fileInput.setAttribute('capture', 'environment');
-      fileInput.click();
+      const isImage =
+        ACCEPTED_MIME_TYPES.includes(file.type) || file.type.startsWith('image/');
+      if (!isImage) {
+        showError('Dat lijkt geen afbeelding. Probeer een foto te maken of selecteer een ander bestand.');
+        e.target.value = '';
+        return;
+      }
+
+      await processPhoto(file);
+      e.target.value = ''; // reset so the same file can be re-selected for retry
     });
-  }
-
-  if (fileBrowseBtn) {
-    fileBrowseBtn.addEventListener('click', () => {
-      fileInput.removeAttribute('capture');
-      fileInput.click();
-    });
-  }
-
-  // The dropzone label itself can also trigger the file picker
-  // (already wired via the <label for> association, no extra JS needed)
-
-  fileInput.addEventListener('change', async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate MIME type — phones occasionally produce unusual formats
-    const isImage = ACCEPTED_MIME_TYPES.includes(file.type) || file.type.startsWith('image/');
-    if (!isImage) {
-      showError('Dat lijkt geen afbeelding. Probeer een foto te maken of selecteer een ander bestand.');
-      e.target.value = ''; // reset for retry
-      return;
-    }
-
-    await processPhoto(file);
-    e.target.value = ''; // reset so the same file can be re-selected for retry
   });
 }
 

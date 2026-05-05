@@ -122,8 +122,28 @@
           />
         </label>
         <div class="photo-actions">
-          <button class="btn btn-primary" type="button">Open camera</button>
-          <button class="btn btn-secondary" type="button">Bestand kiezen</button>
+          <!-- Two separate file inputs — one for camera capture, one for browsing.
+               Using <label> wrapping keeps the click within user gesture context,
+               which is required by browser security for file pickers. -->
+          <label class="btn btn-primary" for="photo-input-camera">
+            Open camera
+            <input
+              id="photo-input-camera"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              class="visually-hidden"
+            />
+          </label>
+          <label class="btn btn-secondary" for="photo-input-file">
+            Bestand kiezen
+            <input
+              id="photo-input-file"
+              type="file"
+              accept="image/*"
+              class="visually-hidden"
+            />
+          </label>
         </div>
       </div>
 
