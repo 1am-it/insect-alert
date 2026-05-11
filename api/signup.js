@@ -2,17 +2,15 @@
  * Vercel serverless function — POST /api/signup
  *
  * Accepts an email address and stores it in the Supabase `email_signups` table.
- * Rate-limited per IP (5 signups per hour) to prevent abuse.
  *
- * Last reviewed: 2026-05-11 (1AM-178)
+ * Rate limiting is intentionally omitted for MVP — the UNIQUE constraint on
+ * email prevents the most obvious spam vector. If abuse becomes a real signal
+ * (rather than a hypothetical concern), add rate-limit middleware in a follow-up.
+ *
+ * Last reviewed: 2026-05-11 (1AM-177)
  */
 
 import { getSupabaseAdmin } from './_lib/supabase-admin.js';
-import {
-  checkRateLimit,
-  getClientIp,
-  hashIp,
-} from './_lib/rate-limit.js';
 
 export const config = {
   runtime: 'nodejs',
@@ -65,28 +63,9 @@ export default async function handler(req, res) {
       });
     }
 
-    // Rate limit by hashed IP — 5 signups per hour
-    const clientIp = getClientIp(req);
-    const ipHash = hashIp(clientIp);
-
-    const { allowed, retryAfter } = await checkRateLimit({
-      key: ipHash,
-      bucket: 'signup',
-      maxRequests: 5,
-      windowSeconds: 3600,
-    });
-
-    if (!allowed) {
-      res.setHeader('Retry-After', String(retryAfter));
-      return res.status(429).json({
-        error: 'rate_limited',
-        message: 'Te veel pogingen. Probeer het later opnieuw.',
-      });
-    }
-
-    // Insert into Supabase. Unique constraint on email means duplicates
-    // throw a Postgres 23505 error — we treat that as success ("already
-    // signed up" is a fine outcome for the user)
+    // Insert into Supabase. UNIQUE constraint on email means duplicates throw
+    // a Postgres 23505 error — we treat that as success ("already signed up"
+    // is a fine outcome for the user)
     const supabase = getSupabaseAdmin();
     const userAgent = req.headers['user-agent'] || null;
 
@@ -94,7 +73,6 @@ export default async function handler(req, res) {
       email,
       source: 'web',
       user_agent: userAgent,
-      ip_hash: ipHash,
     });
 
     if (error) {
