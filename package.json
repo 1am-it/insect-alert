@@ -1,6 +1,6 @@
 {
   "name": "insect-alert",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Detecteer insect-ingrediënten in voedingsmiddelen — paste of foto",
   "type": "module",
@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.51.0",
+    "@supabase/supabase-js": "^2.48.0",
     "browser-image-compression": "^2.0.2"
   },
   "devDependencies": {
