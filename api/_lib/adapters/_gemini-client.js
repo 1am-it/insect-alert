@@ -16,18 +16,19 @@
 import { GoogleGenAI } from '@google/genai';
 
 /**
- * Construct a Gemini client. Throws with a clear message when the
- * GEMINI_API_KEY environment variable is missing, so configuration
- * errors fail fast at first use rather than surfacing as a cryptic
- * SDK stack trace later.
+ * Construct a Gemini client. Throws with a clear message when no API key
+ * is available, so configuration errors fail fast at first use rather
+ * than surfacing as a cryptic SDK stack trace later.
  *
+ * @param {string} [overrideApiKey] - Optional API key override; falls back to
+ *   process.env.GEMINI_API_KEY when omitted. Mainly useful for tests.
  * @returns {GoogleGenAI} A configured Gemini client instance
- * @throws {Error} When GEMINI_API_KEY is not set
+ * @throws {Error} When neither overrideApiKey nor GEMINI_API_KEY is set
  */
-export function createClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
+export function createClient(overrideApiKey) {
+  const apiKey = overrideApiKey || process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY environment variable is not set');
+    throw new Error('gemini client: GEMINI_API_KEY env var is not set');
   }
   return new GoogleGenAI({ apiKey });
 }
