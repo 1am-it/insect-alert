@@ -40,6 +40,13 @@ const ACCURACY_TARGET = 0.95;
 const REQUIRED_COLUMNS = ['bucket', 'id', 'question', 'expected_category', 'expected_component'];
 const OPTIONAL_COLUMNS = ['expected_deflection_target', 'notes'];
 
+// Rate limiting: Gemini Flash free tier is 10 RPM. We throttle to stay well
+// under that. CALL_DELAY_MS is the pause between consecutive classifier calls.
+// MAX_RETRIES_ON_503 is the number of retries when Gemini briefly rejects
+// (e.g., during a rate-limit spike).
+const CALL_DELAY_MS = Number(process.env.CALL_DELAY_MS) || 7000;
+const MAX_RETRIES_ON_503 = 2;
+
 // CLI args
 const args = process.argv.slice(2);
 const VERBOSE = args.includes('--verbose');
@@ -138,21 +145,68 @@ function validateHeader(header) {
 // Classifier call
 // ---------------------------------------------------------------------------
 
-async function callClassifier(question) {
-  const res = await fetch(ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question }),
-  });
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-  if (!res.ok) {
-    const errBody = await res.json().catch(() => ({}));
-    throw new Error(
-      `HTTP ${res.status} — ${errBody.error || 'unknown'}: ${errBody.message || res.statusText}`
-    );
+/**
+ * Call the classifier endpoint, with retry-with-backoff on 503 errors.
+ *
+ * Gemini Flash free tier has aggressive rate limits (10 RPM). Sequential
+ * unthrottled calls quickly exhaust this. The eval script throttles between
+ * calls (CALL_DELAY_MS), and additionally retries 503s with longer waits in
+ * case Gemini briefly rejects.
+ *
+ * Returns { response, error, errorKind } where:
+ *   - response: parsed JSON on success, or null
+ *   - error: error message on failure, or null
+ *   - errorKind: 'classification' | 'infra' | null
+ *      - 'infra' = HTTP 5xx, network failure, timeout (re-runnable, not classifier's fault)
+ *      - 'classification' = HTTP 4xx (bad request, validation) — counts against accuracy
+ */
+async function callClassifierWithRetry(question) {
+  const backoffs = [10000, 30000]; // 10s then 30s retry waits
+
+  for (let attempt = 0; attempt <= MAX_RETRIES_ON_503; attempt++) {
+    try {
+      const res = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question }),
+      });
+
+      if (res.ok) {
+        return { response: await res.json(), error: null, errorKind: null };
+      }
+
+      // Read error body (best effort)
+      const errBody = await res.json().catch(() => ({}));
+      const errorMsg = `HTTP ${res.status} — ${errBody.error || 'unknown'}: ${errBody.message || res.statusText}`;
+
+      // 5xx = infrastructure: retry if attempts remain
+      if (res.status >= 500 && attempt < MAX_RETRIES_ON_503) {
+        process.stdout.write(`(retry in ${backoffs[attempt] / 1000}s...) `);
+        await sleep(backoffs[attempt]);
+        continue;
+      }
+
+      return {
+        response: null,
+        error: errorMsg,
+        errorKind: res.status >= 500 ? 'infra' : 'classification',
+      };
+    } catch (e) {
+      // Network/fetch failure = infra
+      if (attempt < MAX_RETRIES_ON_503) {
+        process.stdout.write(`(retry in ${backoffs[attempt] / 1000}s...) `);
+        await sleep(backoffs[attempt]);
+        continue;
+      }
+      return { response: null, error: e.message, errorKind: 'infra' };
+    }
   }
 
-  return await res.json();
+  return { response: null, error: 'unreachable code', errorKind: 'infra' };
 }
 
 // ---------------------------------------------------------------------------
@@ -208,35 +262,56 @@ function generateReport(results, summary) {
   lines.push('═══════════════════════════════════════════════════════════════');
   lines.push('');
 
+  // Infra failures summary (if any)
+  if (summary.infraFailures > 0) {
+    lines.push('⚠️  INFRASTRUCTURE FAILURES DETECTED');
+    lines.push('');
+    lines.push(
+      `  ${summary.infraFailures} of ${summary.totalCount} requests failed due to HTTP 5xx or network issues`
+    );
+    lines.push(
+      `  (likely Gemini rate limiting or transient outage). These are NOT classifier`
+    );
+    lines.push(`  failures — they were never actually classified. Accuracy below is`);
+    lines.push(`  calculated only on the ${summary.testedCount} successfully-tested questions.`);
+    lines.push('');
+    lines.push(
+      `  Recommendation: increase CALL_DELAY_MS (env var) and re-run to get a complete sample.`
+    );
+    lines.push('');
+  }
+
   // Per-bucket summary
   lines.push('Per-bucket results (category + component must both match):');
   lines.push('');
   for (const bucket of ['A', 'B', 'C', 'D']) {
     const stats = summary.byBucket[bucket];
     if (!stats || stats.total === 0) continue;
-    const passSymbol = stats.passed === stats.total ? '✓' : '✗';
-    lines.push(
-      `  Bucket ${bucket}: ${String(stats.passed).padStart(2)}/${stats.total}  ` +
-        `${pct(stats.passed, stats.total).padStart(6)}  ${passSymbol}`
-    );
+    const passSymbol = stats.passed === stats.tested && stats.tested > 0 ? '✓' : '✗';
+    let line =
+      `  Bucket ${bucket}: ${String(stats.passed).padStart(2)}/${stats.tested}` +
+      `  ${pct(stats.passed, stats.tested).padStart(6)}  ${passSymbol}`;
+    if (stats.infra > 0) line += `  (${stats.infra} infra-failed)`;
+    lines.push(line);
   }
   lines.push('');
   lines.push(
-    `  TOTAL:    ${summary.totalPassed}/${summary.totalCount}  ` +
-      `${pct(summary.totalPassed, summary.totalCount)}`
+    `  TOTAL:    ${summary.totalPassed}/${summary.testedCount}  ` +
+      `${pct(summary.totalPassed, summary.testedCount)}` +
+      (summary.infraFailures > 0 ? `  (${summary.infraFailures} infra-failed, NOT tested)` : '')
   );
   lines.push('');
 
   // Per-metric breakdown
-  lines.push('Per-metric accuracy:');
+  lines.push('Per-metric accuracy (on tested calls only):');
   lines.push('');
   lines.push(
-    `  Category accuracy:        ${summary.categoryPassed}/${summary.totalCount}  ` +
-      pct(summary.categoryPassed, summary.totalCount)
+    `  Category accuracy:        ${summary.categoryPassed}/${summary.testedCount}  ` +
+      pct(summary.categoryPassed, summary.testedCount)
   );
   lines.push(
-    `  Component accuracy:       ${summary.componentPassed}/${summary.totalCount}  ` +
-      pct(summary.componentPassed, summary.totalCount)
+    `  Component accuracy:       ${summary.componentPassed}/${summary.testedCount}  ` +
+      pct(summary.componentPassed, summary.testedCount)
   );
   if (summary.deflectionTotal > 0) {
     lines.push(
@@ -255,14 +330,18 @@ function generateReport(results, summary) {
   }
   lines.push('');
 
-  // Failures
-  const failures = results.filter((r) => !r.passed);
-  if (failures.length > 0) {
+  // Failures — split into infra (not tested) and classification (wrong answer)
+  const infraFailures = results.filter((r) => r.errorKind === 'infra');
+  const classificationFailures = results.filter(
+    (r) => r.errorKind === 'classification' || (r.evaluation && !r.passed)
+  );
+
+  if (classificationFailures.length > 0) {
     lines.push('═══════════════════════════════════════════════════════════════');
-    lines.push(`Failures (${failures.length}):`);
+    lines.push(`Classification failures (${classificationFailures.length}):`);
     lines.push('═══════════════════════════════════════════════════════════════');
     lines.push('');
-    for (const f of failures) {
+    for (const f of classificationFailures) {
       lines.push(`  ${f.id}: "${f.question}"`);
       lines.push(
         `    Expected: ${f.expected_category}/${f.expected_component}` +
@@ -281,19 +360,38 @@ function generateReport(results, summary) {
     }
   }
 
+  if (infraFailures.length > 0) {
+    lines.push('═══════════════════════════════════════════════════════════════');
+    lines.push(`Infra failures — NOT tested (${infraFailures.length}):`);
+    lines.push('═══════════════════════════════════════════════════════════════');
+    lines.push('');
+    // Compact format — these aren't classifier failures, just list them briefly
+    for (const f of infraFailures) {
+      lines.push(`  ${f.id}: ${f.error}`);
+    }
+    lines.push('');
+  }
+
   // Target verdict
   lines.push('═══════════════════════════════════════════════════════════════');
-  const totalPct = summary.totalPassed / summary.totalCount;
-  if (totalPct >= ACCURACY_TARGET) {
-    lines.push(
-      `✓ OPS-20 Phase D target (>=${(ACCURACY_TARGET * 100).toFixed(0)}%) MET`
-    );
-  } else if (totalPct >= 0.75) {
-    lines.push(
-      `⚠ Above 75% baseline but below ${(ACCURACY_TARGET * 100).toFixed(0)}% target — prompt-tuning recommended`
-    );
+  if (summary.infraFailures > 0) {
+    lines.push(`⚠ INCOMPLETE RUN — ${summary.infraFailures} infra failures, accuracy not reliable`);
+    lines.push(`  Re-run with CALL_DELAY_MS=10000 or higher to throttle further.`);
+  } else if (summary.testedCount === 0) {
+    lines.push(`✗ No requests were successfully tested.`);
   } else {
-    lines.push(`✗ Below 75% baseline — prompt-tuning required before Sprint 3`);
+    const totalPct = summary.totalPassed / summary.testedCount;
+    if (totalPct >= ACCURACY_TARGET) {
+      lines.push(
+        `✓ OPS-20 Phase D target (>=${(ACCURACY_TARGET * 100).toFixed(0)}%) MET`
+      );
+    } else if (totalPct >= 0.75) {
+      lines.push(
+        `⚠ Above 75% baseline but below ${(ACCURACY_TARGET * 100).toFixed(0)}% target — prompt-tuning recommended`
+      );
+    } else {
+      lines.push(`✗ Below 75% baseline — prompt-tuning required before Sprint 3`);
+    }
   }
   lines.push('═══════════════════════════════════════════════════════════════');
 
@@ -331,20 +429,16 @@ async function main() {
   }
 
   console.log(`Running ${rows.length} questions against ${ENDPOINT}`);
+  console.log(`Throttle: ${CALL_DELAY_MS}ms between calls, max ${MAX_RETRIES_ON_503} retries on 5xx`);
   console.log('');
 
-  // Execute sequentially
+  // Execute sequentially with throttle
   const results = [];
-  for (const row of rows) {
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
     process.stdout.write(`  ${row.id.padEnd(4)} ${row.question.slice(0, 60).padEnd(62)} `);
 
-    let response = null;
-    let error = null;
-    try {
-      response = await callClassifier(row.question);
-    } catch (e) {
-      error = e.message;
-    }
+    const { response, error, errorKind } = await callClassifierWithRetry(row.question);
 
     let result;
     if (error) {
@@ -357,10 +451,11 @@ async function main() {
         expected_deflection_target: row.expected_deflection_target || null,
         response: null,
         error,
+        errorKind, // 'infra' or 'classification'
         passed: false,
         evaluation: null,
       };
-      process.stdout.write('✗ ERROR\n');
+      process.stdout.write(errorKind === 'infra' ? '✗ INFRA\n' : '✗ ERROR\n');
     } else {
       const evaluation = evaluateResponse(row, response);
       const passed = evaluation.categoryMatch && evaluation.componentMatch;
@@ -373,6 +468,7 @@ async function main() {
         expected_deflection_target: row.expected_deflection_target || null,
         response,
         error: null,
+        errorKind: null,
         passed,
         evaluation,
       };
@@ -383,6 +479,11 @@ async function main() {
     }
 
     results.push(result);
+
+    // Throttle between calls (not after the last one)
+    if (i < rows.length - 1) {
+      await sleep(CALL_DELAY_MS);
+    }
   }
 
   console.log('');
@@ -391,6 +492,11 @@ async function main() {
   const summary = {
     totalCount: results.length,
     totalPassed: results.filter((r) => r.passed).length,
+    infraFailures: results.filter((r) => r.errorKind === 'infra').length,
+    classificationFailures: results.filter(
+      (r) => r.errorKind === 'classification' || (r.evaluation && !r.passed)
+    ).length,
+    testedCount: results.filter((r) => r.errorKind !== 'infra').length,
     byBucket: {},
     categoryPassed: 0,
     componentPassed: 0,
@@ -401,9 +507,16 @@ async function main() {
 
   for (const r of results) {
     const b = r.bucket;
-    if (!summary.byBucket[b]) summary.byBucket[b] = { total: 0, passed: 0 };
+    if (!summary.byBucket[b]) {
+      summary.byBucket[b] = { total: 0, passed: 0, infra: 0, tested: 0 };
+    }
     summary.byBucket[b].total += 1;
-    if (r.passed) summary.byBucket[b].passed += 1;
+    if (r.errorKind === 'infra') {
+      summary.byBucket[b].infra += 1;
+    } else {
+      summary.byBucket[b].tested += 1;
+      if (r.passed) summary.byBucket[b].passed += 1;
+    }
 
     if (r.evaluation) {
       if (r.evaluation.categoryMatch) summary.categoryPassed += 1;
@@ -433,9 +546,14 @@ async function main() {
   console.log('');
   console.log(`Report written to: ${reportPath}`);
 
-  // Exit code based on target
-  const totalPct = summary.totalPassed / summary.totalCount;
-  process.exitCode = totalPct >= ACCURACY_TARGET ? 0 : 1;
+  // Exit code: 0 only if (a) all questions actually tested AND (b) accuracy >= target
+  // If infra failures occurred, the run is incomplete regardless of accuracy.
+  if (summary.infraFailures > 0) {
+    process.exitCode = 1;
+  } else {
+    const totalPct = summary.totalPassed / summary.totalCount;
+    process.exitCode = totalPct >= ACCURACY_TARGET ? 0 : 1;
+  }
 }
 
 main().catch((e) => {
