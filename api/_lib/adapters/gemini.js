@@ -6,10 +6,13 @@
  * apiKey, etc.). The public scanImage interface validates inputs before
  * calling here, so adapters can assume non-empty imageBuffer/prompt/schema.
  *
- * Last reviewed: 2026-05-04 (1AM-57)
+ * SDK-auth setup is delegated to `_gemini-client.js` (see 1AM-234). This file
+ * focuses on vision-specific request construction and timeout handling.
+ *
+ * Last reviewed: 2026-05-26 (1AM-248)
  */
 
-import { GoogleGenAI } from '@google/genai';
+import { createClient } from './_gemini-client.js';
 
 const DEFAULT_MODEL = 'gemini-2.5-flash';
 const DEFAULT_TIMEOUT_MS = 15000;
@@ -29,15 +32,19 @@ const DEFAULT_TIMEOUT_MS = 15000;
  * @returns {Promise<Object>}
  */
 export async function scan({ imageBuffer, mimeType, prompt, schema, options = {} }) {
-  const apiKey = options.apiKey || process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('gemini adapter: GEMINI_API_KEY env var is not set');
-  }
-
   const model = options.model || DEFAULT_MODEL;
   const timeoutMs = options.timeoutMs || DEFAULT_TIMEOUT_MS;
 
-  const ai = new GoogleGenAI({ apiKey });
+  // Delegate SDK + API key handling to _gemini-client.
+  // createClient throws "gemini-client: GEMINI_API_KEY env var is not set"
+  // when no key is available. Re-prefix to keep the existing
+  // "gemini adapter: ..." error contract from this module's callers.
+  let ai;
+  try {
+    ai = createClient({ overrideApiKey: options.apiKey });
+  } catch (error) {
+    throw new Error(`gemini adapter: ${error.message}`);
+  }
 
   // Convert buffer to base64 — Gemini's inlineData expects a base64 string
   const base64Image = Buffer.isBuffer(imageBuffer)
