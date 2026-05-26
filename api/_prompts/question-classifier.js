@@ -19,7 +19,7 @@
  *   - category=ambiguous  → dataQuery.clarificationType is required
  *   Any missing required field → fallback ambiguous object
  *
- * Last reviewed: 2026-05-17 (1AM-237)
+ * Last reviewed: 2026-05-26 (1AM-251 ronde 1 — regulation decoder/list disambiguation)
  */
 
 import { Type } from '@google/genai';
@@ -59,6 +59,28 @@ Your ONLY task is to classify the user's follow-up question into one of four cat
 Fill only the fields relevant to the selected category. Leave irrelevant fields as null or omit them. Per category:
 - decoder: dataQuery.lookup + dataQuery.value (or dataQuery.ids for comparison)
 - regulation: dataQuery.topic + optionally regulationItemId, insectId, sort
+  Component choice for regulation:
+    * decoder-card — single-concept explainer (one X, one answer):
+      "Wat is X?" / "Hoe werkt X?" / "Waarom Y?" / "Wat doet [EU body]?"
+      The question asks for ONE explanation of ONE concept, not a list.
+      Examples: "Wat is novel food?", "Hoe werkt EU-toelating voor insecten?",
+      "Wat doet EFSA?", "Welke EU-verordening gaat over insecten?"
+      NOTE: "Wat doet X?" maps to decoder-card ONLY when X is an EU body
+      or regulatory organ (EFSA, NVWA, European Commission). For medical
+      or religious authorities ("Wat doet de huisarts bij allergie?"),
+      this is a deflection question — route to deflection-card.
+    * list-card — multi-item enumeration:
+      "Welke X..." when X is plural OR the question contains list-signal
+      words like "allemaal", "alle", "welke zijn er", "lijst".
+      "Welke X..." when X is singular AND the question expects ONE specific
+      answer (one regulation, one body, one concept) maps to decoder-card,
+      not list-card.
+      Examples (list-card): "Welke insecten zijn EU-goedgekeurd?",
+      "Welke insecten zitten nog in de pijplijn?"
+    * timeline-card — chronological:
+      "Sinds wanneer..." / "Wanneer werd..."
+      Examples: "Sinds wanneer mag krekel in brood?", "Wanneer werden insecten
+      in de EU goedgekeurd?"
 - deflection: dataQuery.topicType + deflectionTarget MUST be set
 - ambiguous: dataQuery.clarificationType + optionally suggestedOptions
 
