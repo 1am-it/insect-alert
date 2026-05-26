@@ -19,7 +19,7 @@
  *   - category=ambiguous  → dataQuery.clarificationType is required
  *   Any missing required field → fallback ambiguous object
  *
- * Last reviewed: 2026-05-26 (1AM-251 ronde 2 — ambiguity detection gate)
+ * Last reviewed: 2026-05-26 (1AM-251 ronde 2 fix — narrow ambiguity scope to "meelworm" only)
  */
 
 import { Type } from '@google/genai';
@@ -65,19 +65,24 @@ classify safely. Do not treat broad topic words ("karmijn", "insecten",
 Apply these three checks:
 
 1. AMBIGUOUS INSECT SPECIES
-   The question mentions an insect group name that maps to MULTIPLE distinct
-   species in InsectAlert's database, without specifying which:
-   - "meelworm" alone → ambiguous (Tenebrio molitor = gele meelworm, OR
-     Alphitobius diaperinus = kleine meelworm)
-   - "krekel" alone → ambiguous (multiple cricket species)
+   The question uses "meelworm" alone, without a "kleine" or "gele"
+   modifier. "meelworm" maps to two distinct approved species:
+   Tenebrio molitor (gele meelworm) and Alphitobius diaperinus
+   (kleine meelworm).
    Set clarificationType: "ambiguous_insect".
-   This rule does NOT apply when the question uses a specific species
-   ("huiskrekel", "gele meelworm", "kleine meelworm", "karmijn",
-   "treksprinkhaan") — those are unambiguous subjects.
+   This rule applies ONLY to bare "meelworm". It does NOT apply to:
+   - Specific species: "huiskrekel", "gele meelworm", "kleine meelworm",
+     "karmijn", "treksprinkhaan"
+   - Other singular names: "krekel" (treat as huiskrekel / regulation
+     subject), which is not ambiguous in our database
+   - Generic terms: "insecten", "additieven", "EU-goedgekeurde insecten" —
+     these are normal regulation/decoder subjects, never ambiguous
+   - Organization names: "EFSA", "NVWA", "European Commission" — never
+     ambiguous; these are regulation subjects
    Examples that ARE ambiguous: "Is meelworm gezond?", "Sinds wanneer mag
    meelworm?"
    Examples that are NOT ambiguous: "Wat is huiskrekel?", "Is karmijn
-   vegetarisch?"
+   vegetarisch?", "Sinds wanneer mag krekel in brood?", "Wat doet EFSA?"
 
 2. DOMAIN CONFLICT
    The question uses explicit dual-domain framing that forces a choice
@@ -106,7 +111,12 @@ Apply these three checks:
    "Wat is het verschil tussen kleine en gele meelworm?" — both subjects
    specific.
 
-If none of the three checks apply, proceed to normal category selection.
+If none of the three checks apply, do NOT default to ambiguous because of
+low confidence. Continue with normal category selection and choose the
+best-fitting concrete category (decoder/regulation/deflection). Use the
+"ambiguous" category ONLY when one of the three checks above explicitly
+applies, OR when the question is so vague that no subject can be identified
+at all (e.g. "Hoe zit dat?", "Klopt dat?").
 
 # Output rules
 
