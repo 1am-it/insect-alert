@@ -19,7 +19,7 @@
  *   - category=ambiguous  → dataQuery.clarificationType is required
  *   Any missing required field → fallback ambiguous object
  *
- * Last reviewed: 2026-05-26 (1AM-251 ronde 1 — regulation decoder/list disambiguation)
+ * Last reviewed: 2026-05-26 (1AM-251 ronde 2 — ambiguity detection gate)
  */
 
 import { Type } from '@google/genai';
@@ -53,6 +53,60 @@ Your ONLY task is to classify the user's follow-up question into one of four cat
    - "Hoe zit dat?" (no subject)
    - "Wat is een meelworm?" (gele or kleine?)
    - "Is dit veilig?" (medical, food safety, or EU approval?)
+
+# Ambiguity detection (CHECK FIRST)
+
+Before selecting a concrete category (decoder/regulation/deflection), evaluate
+whether the question gives enough context to safely route to one path.
+Choose "ambiguous" ONLY when the question genuinely lacks the context to
+classify safely. Do not treat broad topic words ("karmijn", "insecten",
+"E120") as ambiguous on their own — those are normal decoder/regulation subjects.
+
+Apply these three checks:
+
+1. AMBIGUOUS INSECT SPECIES
+   The question mentions an insect group name that maps to MULTIPLE distinct
+   species in InsectAlert's database, without specifying which:
+   - "meelworm" alone → ambiguous (Tenebrio molitor = gele meelworm, OR
+     Alphitobius diaperinus = kleine meelworm)
+   - "krekel" alone → ambiguous (multiple cricket species)
+   Set clarificationType: "ambiguous_insect".
+   This rule does NOT apply when the question uses a specific species
+   ("huiskrekel", "gele meelworm", "kleine meelworm", "karmijn",
+   "treksprinkhaan") — those are unambiguous subjects.
+   Examples that ARE ambiguous: "Is meelworm gezond?", "Sinds wanneer mag
+   meelworm?"
+   Examples that are NOT ambiguous: "Wat is huiskrekel?", "Is karmijn
+   vegetarisch?"
+
+2. DOMAIN CONFLICT
+   The question uses explicit dual-domain framing that forces a choice
+   between two routing domains (decoder/regulation/deflection). Signals:
+   - Two oppositional terms joined by "of" referring to different domains:
+     "gevaarlijk of veilig", "toegestaan of schadelijk"
+   - Compound questions explicitly spanning domains:
+     "Mag dit én is het veilig?", "Is dit toegestaan of moet ik een arts bellen?"
+   Set clarificationType: "domain_conflict".
+   Examples that ARE domain conflicts: "Karmijn — gevaarlijk of veilig?",
+   "Is dit toegestaan of schadelijk?"
+
+   Single-intent questions are NOT domain conflicts, even when they use
+   words like "gezond", "veilig", "goed", "slecht":
+   - "Is karmijn gezond?" → deflection (Voedingscentrum), single-intent nutrition
+   - "Is dit veilig tijdens zwangerschap?" → deflection (huisarts), single-intent medical
+   - "Kan ik dit eten?" → deflection, single-intent
+   - "Zijn insecten slecht voor je?" → deflection (nutrition), single-intent
+
+3. COMPARISON WITH AMBIGUOUS SUBJECTS
+   "verschil tussen X en Y" — but X or Y is itself an ambiguous insect group.
+   Set clarificationType: "ambiguous_insect".
+   Examples that ARE ambiguous: "Krekel of meelworm — wat is het verschil?"
+   (which krekel? which meelworm?)
+   Examples that are NOT ambiguous (use decoder/comparison instead):
+   "Wat is het verschil tussen kleine en gele meelworm?" — both subjects
+   specific.
+
+If none of the three checks apply, proceed to normal category selection.
 
 # Output rules
 
