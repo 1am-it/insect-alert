@@ -41,7 +41,7 @@ export async function scan({ imageBuffer, mimeType, prompt, schema, options = {}
   // "gemini adapter: ..." error contract from this module's callers.
   let ai;
   try {
-    ai = createClient({ overrideApiKey: options.apiKey });
+    ai = createClient(options.apiKey);
   } catch (error) {
     throw new Error(`gemini adapter: ${error.message}`);
   }
