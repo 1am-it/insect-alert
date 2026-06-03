@@ -19,7 +19,7 @@
  *   - category=ambiguous  → dataQuery.clarificationType is required
  *   Any missing required field → fallback ambiguous object
  *
- * Last reviewed: 2026-05-26 (1AM-251 ronde 1 — regulation decoder/list disambiguation)
+ * Last reviewed: 2026-06-03 (1AM-256 — comparison routing: difference→list-card, identity→decoder-card)
  */
 
 import { Type } from '@google/genai';
@@ -57,7 +57,29 @@ Your ONLY task is to classify the user's follow-up question into one of four cat
 # Output rules
 
 Fill only the fields relevant to the selected category. Leave irrelevant fields as null or omit them. Per category:
-- decoder: dataQuery.lookup + dataQuery.value (or dataQuery.ids for comparison)
+- decoder: dataQuery.lookup + dataQuery.value (single ingredient), OR
+  dataQuery.lookup="comparison" + dataQuery.ids=[X, Y] (two ingredients).
+  Component choice for comparison (lookup="comparison"):
+    * list-card — DIFFERENCE comparison: the user wants two specific,
+      known ingredients broken down side by side.
+      Triggers: "verschil tussen X en Y", "X vs Y", "X versus Y",
+      "X tegenover Y", "waarin verschillen X en Y".
+      ONLY when BOTH X and Y are specific, known subjects (a named insect
+      or additive). Set component="list-card", lookup="comparison", ids=[X, Y].
+      Example: "Wat is het verschil tussen kleine en gele meelworm?"
+        -> component="list-card", lookup="comparison",
+           ids=["kleine meelworm", "gele meelworm"]
+    * decoder-card — IDENTITY/EQUIVALENCE check: the user asks whether two
+      names refer to the same thing (a yes/no question, not a breakdown).
+      Triggers: "Is X hetzelfde als Y?", "Is X gelijk aan Y?",
+      "Zijn X en Y hetzelfde?".
+      Set component="decoder-card", lookup="comparison", ids=[X, Y].
+      Example: "Is E120 hetzelfde als karmijn?"
+        -> component="decoder-card", lookup="comparison", ids=["E120", "karmijn"]
+  IMPORTANT: if EITHER subject is ambiguous (e.g. "krekel of meelworm" where
+  "meelworm" could be gele or kleine), this is NOT a comparison — route to
+  category="ambiguous" with clarificationType="ambiguous_insect". Comparison
+  requires BOTH subjects to be specific and unambiguous.
 - regulation: dataQuery.topic + optionally regulationItemId, insectId, sort
   Component choice for regulation:
     * decoder-card — single-concept explainer (one X, one answer):
