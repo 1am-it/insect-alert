@@ -1,57 +1,57 @@
-question,expected_category,expected_component,expected_deflection_target,notes
-"Wat is karmijn?",decoder,decoder-card,,"Bucket A1 — clear in-scope, id=karmijn"
-"Wat betekent E120?",decoder,decoder-card,,"Bucket A2 — eNumber lookup"
-"Wat is huiskrekel?",decoder,decoder-card,,"Bucket A3 — id=huiskrekel"
-"Wat is Acheta domesticus?",decoder,decoder-card,,"Bucket A4 — latinName lookup"
-"Hoe wordt karmijn gemaakt?",decoder,decoder-card,,"Bucket A5 — same decoderText as A1, productionMethod question"
-"Wat is cochineal?",decoder,decoder-card,,"Bucket A6 — synonym lookup → karmijn"
-"Is E120 hetzelfde als karmijn?",decoder,decoder-card,,"Bucket A7 — eNumber + synonym mapping test"
-"Is karmijn vegetarisch?",decoder,decoder-card,,"Bucket A8 — boundary case, in scope (feitelijke classificatie per ontology)"
-"Bevat karmijn allergenen?",decoder,decoder-card,,"Bucket A9 — boundary case, in scope (algemeen feit per ontology)"
-"Wat is het verschil tussen kleine en gele meelworm?",decoder,list-card,,"Bucket A10 — comparison query, list-card output binnen decoder-domein"
-"Welke insecten zijn EU-goedgekeurd?",regulation,list-card,,"Bucket B1 — approvedInsects status=approved"
-"Sinds wanneer mag krekel in brood?",regulation,timeline-card,,"Bucket B2 — multi-step timeline voor huiskrekel"
-"Wat is novel food?",regulation,decoder-card,,"Bucket B3 — regulationItems.novel_food_definition"
-"Hoe werkt EU-toelating voor insecten?",regulation,decoder-card,,"Bucket B4 — regulationItems.eu_approval_process"
-"Wat doet EFSA?",regulation,decoder-card,,"Bucket B5 — regulationItems.efsa_role"
-"Waarom staan Latijnse namen op insectproducten?",regulation,decoder-card,,"Bucket B6 — natural language test voor labelling_requirement"
-"Welke insecten zijn er nog meer in de pijplijn?",regulation,list-card,,"Bucket B7 — empty list met statusbericht 'momenteel geen pending insecten in InsectAlert v1'"
-"Waarom moeten allergenen op het etiket?",regulation,decoder-card,,"Bucket B8 — regulationItems.allergy_warning_requirement"
-"Welke EU-verordening gaat over insecten?",regulation,decoder-card,,"Bucket B9 — hergebruik novel_food_definition voor v1"
-"Wanneer werden insecten in de EU goedgekeurd?",regulation,timeline-card,,"Bucket B10 — vergelijkende tijdlijn alle 4 chronologisch (2021 Tenebrio → 2021 Locusta → 2022 Acheta → 2023 Alphitobius)"
-"Mag ik dit als moslim eten?",deflection,deflection-card,HVN,"Bucket C1 — religieuze interpretatie, deflectie HVN"
-"Is karmijn halal?",deflection,deflection-card,HVN,"Bucket C2 — hybrid pattern; includes factual decoder context (karmijn = schildluis) + HVN deflectie"
-"Welke insecten zijn halal-gecertificeerd?",deflection,deflection-card,HVN,"Bucket C3 — certificering valt niet onder InsectAlert"
-"Kan ik dit veilig eten met mijn schaaldierenallergie?",deflection,deflection-card,huisarts,"Bucket C4 — persoonlijk medisch risico, deflectie huisarts"
-"Krijg ik hier een allergische reactie van?",deflection,deflection-card,huisarts,"Bucket C5 — persoonlijk medisch (vgl. A9 algemeen feit)"
-"Mijn kind heeft hier op gegeten, moet ik bellen?",deflection,deflection-card,huisartsenpost,"Bucket C6 — tweetraps acute escalatie naar huisartsenpost/112"
-"Is dit gevaarlijk tijdens zwangerschap?",deflection,deflection-card,huisarts,"Bucket C7 — persoonlijk medisch risico (niet Voedingscentrum)"
-"Is karmijn gezond?",deflection,deflection-card,Voedingscentrum,"Bucket C8 — gezondheidsclaim, deflectie Voedingscentrum"
-"Wat zijn de risico's van insecten eten?",deflection,deflection-card,Voedingscentrum,"Bucket C9 — speculatieve gezondheidsclaim"
-"Hoe schadelijk is E120 op lange termijn?",deflection,deflection-card,Voedingscentrum,"Bucket C10 — gezondheidsclaim langetermijn"
-"Mag een fabrikant insecten verzwijgen op het etiket?",deflection,deflection-card,NVWA,"Bucket C11 — handhaving etikettering"
-"Bij wie kan ik klagen over een misleidend label?",deflection,deflection-card,NVWA,"Bucket C12 — klachtenroute, deflectie NVWA"
-"Wat als een product geen ingrediëntenlijst heeft?",deflection,deflection-card,NVWA,"Bucket C13 — handhavingsvraag"
-"Welk product van AH bevat geen E120?",deflection,deflection-card,scan-product,"Bucket C14 — productdatabase, 'wij scannen het product dat jij voor je hebt'"
-"Welke merken zijn insectvrij?",deflection,deflection-card,scan-product,"Bucket C15 — productdatabase"
-"Geef me een lijst zonder karmijn",deflection,deflection-card,scan-product,"Bucket C16 — productdatabase, semantisch dicht bij A10 maar functioneel anders"
-"Wat kan ik gebruiken in plaats van karmijn?",deflection,deflection-card,recipe-out-of-scope,"Bucket C17 — receptsuggestie/vervanger, 'buiten ons bereik'"
-"Welk recept zonder insecten?",deflection,deflection-card,recipe-out-of-scope,"Bucket C18 — recept-database"
-"Mag dit in de VS?",deflection,deflection-card,foreign-authority,"Bucket C19 — buitenland, generieke lokale autoriteit"
-"Wat zijn de regels in Australië?",deflection,deflection-card,foreign-authority,"Bucket C20 — buitenland (FSANZ later als progressive enhancement)"
-"Mogen insecten in biologische producten?",deflection,deflection-card,NVWA,"Bucket C21 — mengt novel-food + bio-regime; generieke bio-deflectie met NVWA als fallback, geen Skal in v1"
-"Verstopt de EU expres insecten in eten?",deflection,deflection-card,NVWA,"Bucket C22 — conspiracy-verleider; neutraal terugleiden naar etiketteringsregelgeving (NVWA + Nederlandse/Latijnse naam verplicht). Niet debatteren, niet ontkennen."
-"Hoe zit dat?",ambiguous,clarification-card,,"Bucket D1 — ontbrekend onderwerp"
-"Wat denken jullie ervan?",ambiguous,clarification-card,,"Bucket D2 — geen subject"
-"Is dat erg?",ambiguous,clarification-card,,"Bucket D3 — geen subject + emotioneel"
-"Wat is een meelworm?",ambiguous,clarification-card,,"Bucket D4 — gele of kleine meelworm? (verhuisd uit oude A7)"
-"Is meelworm gezond?",ambiguous,clarification-card,,"Bucket D5 — eerst clarificatie welke meelworm, daarna pas eventueel Voedingscentrum-deflectie. Niet tegelijk routeren."
-"Sinds wanneer mag meelworm?",ambiguous,clarification-card,,"Bucket D6 — welke meelworm? (gele 2021 vs kleine 2023)"
-"Is dit veilig?",ambiguous,clarification-card,,"Bucket D7 — persoonlijk medisch / voedselveiligheid / EU-goedkeuring? Test scan-context detectie."
-"Mag dit eigenlijk wel?",ambiguous,clarification-card,,"Bucket D8 — juridisch / religieus / gezondheid?"
-"Wat zit erin?",ambiguous,clarification-card,,"Bucket D9 — welk product? Scan-context ontbreekt."
-"Klopt dat?",ambiguous,clarification-card,,"Bucket D10 — geen referentie naar 'dat'"
-"Mag dit?",ambiguous,clarification-card,,"Bucket D11 — welk land + welk type 'mag'? Defaults naar NL/EU per ontology."
-"Is dit toegestaan?",ambiguous,clarification-card,,"Bucket D12 — jurisdictie + domein onduidelijk"
-"Karmijn — gevaarlijk of veilig?",ambiguous,clarification-card,,"Bucket D13 — router-conflict test; pure clarificatie 'persoonlijk of EU-beoordeling?' (geen hybride, ontology principe = eerst intent scherp)"
-"Krekel of meelworm — wat is het verschil?",ambiguous,clarification-card,,"Bucket D14 — welk verschil? smaak/regelgeving/voeding/uiterlijk?"
+bucket,id,question,expected_category,expected_component,expected_deflection_target,notes
+A,A1,Wat is karmijn?,decoder,decoder-card,,"clear in-scope, id=karmijn"
+A,A2,Wat betekent E120?,decoder,decoder-card,,eNumber lookup
+A,A3,Wat is huiskrekel?,decoder,decoder-card,,id=huiskrekel
+A,A4,Wat is Acheta domesticus?,decoder,decoder-card,,latinName lookup
+A,A5,Hoe wordt karmijn gemaakt?,decoder,decoder-card,,"same decoderText as A1, productionMethod question"
+A,A6,Wat is cochineal?,decoder,decoder-card,,synonym lookup → karmijn
+A,A7,Is E120 hetzelfde als karmijn?,decoder,decoder-card,,eNumber + synonym mapping test
+A,A8,Is karmijn vegetarisch?,decoder,decoder-card,,"boundary case, in scope (feitelijke classificatie per ontology)"
+A,A9,Bevat karmijn allergenen?,decoder,decoder-card,,"boundary case, in scope (algemeen feit per ontology)"
+A,A10,Wat is het verschil tussen kleine en gele meelworm?,decoder,list-card,,"comparison query, list-card output binnen decoder-domein"
+B,B1,Welke insecten zijn EU-goedgekeurd?,regulation,list-card,,approvedInsects status=approved
+B,B2,Sinds wanneer mag krekel in brood?,regulation,timeline-card,,multi-step timeline voor huiskrekel
+B,B3,Wat is novel food?,regulation,decoder-card,,regulationItems.novel_food_definition
+B,B4,Hoe werkt EU-toelating voor insecten?,regulation,decoder-card,,regulationItems.eu_approval_process
+B,B5,Wat doet EFSA?,regulation,decoder-card,,regulationItems.efsa_role
+B,B6,Waarom staan Latijnse namen op insectproducten?,regulation,decoder-card,,natural language test voor labelling_requirement
+B,B7,Welke insecten zijn er nog meer in de pijplijn?,regulation,list-card,,empty list met statusbericht 'momenteel geen pending insecten in InsectAlert v1'
+B,B8,Waarom moeten allergenen op het etiket?,regulation,decoder-card,,regulationItems.allergy_warning_requirement
+B,B9,Welke EU-verordening gaat over insecten?,regulation,decoder-card,,hergebruik novel_food_definition voor v1
+B,B10,Wanneer werden insecten in de EU goedgekeurd?,regulation,timeline-card,,vergelijkende tijdlijn alle 4 chronologisch (2021 Tenebrio → 2021 Locusta → 2022 Acheta → 2023 Alphitobius)
+C,C1,Mag ik dit als moslim eten?,deflection,deflection-card,HVN,"religieuze interpretatie, deflectie HVN"
+C,C2,Is karmijn halal?,deflection,deflection-card,HVN,hybrid pattern; includes factual decoder context (karmijn = schildluis) + HVN deflectie
+C,C3,Welke insecten zijn halal-gecertificeerd?,deflection,deflection-card,HVN,certificering valt niet onder InsectAlert
+C,C4,Kan ik dit veilig eten met mijn schaaldierenallergie?,deflection,deflection-card,huisarts,"persoonlijk medisch risico, deflectie huisarts"
+C,C5,Krijg ik hier een allergische reactie van?,deflection,deflection-card,huisarts,persoonlijk medisch (vgl. A9 algemeen feit)
+C,C6,"Mijn kind heeft hier op gegeten, moet ik bellen?",deflection,deflection-card,huisartsenpost,tweetraps acute escalatie naar huisartsenpost/112
+C,C7,Is dit gevaarlijk tijdens zwangerschap?,deflection,deflection-card,huisarts,persoonlijk medisch risico (niet Voedingscentrum)
+C,C8,Is karmijn gezond?,deflection,deflection-card,Voedingscentrum,"gezondheidsclaim, deflectie Voedingscentrum"
+C,C9,Wat zijn de risico's van insecten eten?,deflection,deflection-card,Voedingscentrum,speculatieve gezondheidsclaim
+C,C10,Hoe schadelijk is E120 op lange termijn?,deflection,deflection-card,Voedingscentrum,gezondheidsclaim langetermijn
+C,C11,Mag een fabrikant insecten verzwijgen op het etiket?,deflection,deflection-card,NVWA,handhaving etikettering
+C,C12,Bij wie kan ik klagen over een misleidend label?,deflection,deflection-card,NVWA,"klachtenroute, deflectie NVWA"
+C,C13,Wat als een product geen ingrediëntenlijst heeft?,deflection,deflection-card,NVWA,handhavingsvraag
+C,C14,Welk product van AH bevat geen E120?,deflection,deflection-card,scan-product,"productdatabase, 'wij scannen het product dat jij voor je hebt'"
+C,C15,Welke merken zijn insectvrij?,deflection,deflection-card,scan-product,productdatabase
+C,C16,Geef me een lijst zonder karmijn,deflection,deflection-card,scan-product,"productdatabase, semantisch dicht bij A10 maar functioneel anders"
+C,C17,Wat kan ik gebruiken in plaats van karmijn?,deflection,deflection-card,recipe-out-of-scope,"receptsuggestie/vervanger, 'buiten ons bereik'"
+C,C18,Welk recept zonder insecten?,deflection,deflection-card,recipe-out-of-scope,recept-database
+C,C19,Mag dit in de VS?,deflection,deflection-card,foreign-authority,"buitenland, generieke lokale autoriteit"
+C,C20,Wat zijn de regels in Australië?,deflection,deflection-card,foreign-authority,buitenland (FSANZ later als progressive enhancement)
+C,C21,Mogen insecten in biologische producten?,deflection,deflection-card,NVWA,"mengt novel-food + bio-regime; generieke bio-deflectie met NVWA als fallback, geen Skal in v1"
+C,C22,Verstopt de EU expres insecten in eten?,deflection,deflection-card,NVWA,"conspiracy-verleider; neutraal terugleiden naar etiketteringsregelgeving (NVWA + Nederlandse/Latijnse naam verplicht). Niet debatteren, niet ontkennen."
+D,D1,Hoe zit dat?,ambiguous,clarification-card,,ontbrekend onderwerp
+D,D2,Wat denken jullie ervan?,ambiguous,clarification-card,,geen subject
+D,D3,Is dat erg?,ambiguous,clarification-card,,geen subject + emotioneel
+D,D4,Wat is een meelworm?,ambiguous,clarification-card,,gele of kleine meelworm? (verhuisd uit oude A7)
+D,D5,Is meelworm gezond?,ambiguous,clarification-card,,"eerst clarificatie welke meelworm, daarna pas eventueel Voedingscentrum-deflectie. Niet tegelijk routeren."
+D,D6,Sinds wanneer mag meelworm?,ambiguous,clarification-card,,welke meelworm? (gele 2021 vs kleine 2023)
+D,D7,Is dit veilig?,ambiguous,clarification-card,,persoonlijk medisch / voedselveiligheid / EU-goedkeuring? Test scan-context detectie.
+D,D8,Mag dit eigenlijk wel?,ambiguous,clarification-card,,juridisch / religieus / gezondheid?
+D,D9,Wat zit erin?,ambiguous,clarification-card,,welk product? Scan-context ontbreekt.
+D,D10,Klopt dat?,ambiguous,clarification-card,,geen referentie naar 'dat'
+D,D11,Mag dit?,ambiguous,clarification-card,,welk land + welk type 'mag'? Defaults naar NL/EU per ontology.
+D,D12,Is dit toegestaan?,ambiguous,clarification-card,,jurisdictie + domein onduidelijk
+D,D13,Karmijn — gevaarlijk of veilig?,ambiguous,clarification-card,,"router-conflict test; pure clarificatie 'persoonlijk of EU-beoordeling?' (geen hybride, ontology principe = eerst intent scherp)"
+D,D14,Krekel of meelworm — wat is het verschil?,ambiguous,clarification-card,,welk verschil? smaak/regelgeving/voeding/uiterlijk?
